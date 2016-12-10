@@ -1,0 +1,10 @@
+[
+  {
+    "host": "tutorial",
+    "port": 5432,
+    "name": "dvdrental_modified",
+    "password": "postgres",
+    "user": "postgres"
+  }
+]
+

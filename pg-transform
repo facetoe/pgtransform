@@ -1,0 +1,71 @@
+#!/usr/bin/env python2
+import sys
+import traceback
+from multiprocessing.pool import ThreadPool
+from optparse import OptionParser
+
+from lib.config import Config
+from lib.exception import StrategyException
+from lib.pg_compare import PGCompare
+from lib.pg_transform import PGTransform
+from lib.provider import PickleProvider, DBConnectionProvider
+from lib.util import fail, print_info, print_warn
+
+
+def transform(arg_tuple):
+    try:
+        reference_db, database, commit = arg_tuple
+        print_info("Processing: ", database.database)
+        db_connection = DBConnectionProvider(**database.__dict__)
+        print_info("Comparing: ", database.database)
+        db_diffs = PGCompare(reference_db, db_connection).compare()
+        transformer = PGTransform(db_connection, db_diffs, config, target_name=database.database)
+        transformer.transform(commit)
+    except StrategyException, e:
+        print_warn("WARN: ", "%s - skipping\n" % e.message.strip())
+    except Exception, e:
+        traceback.print_exc()
+        sys.stderr.write("Failed: %s" % e.message)
+
+
+def get_transform_arg_tuples(input_plugin, reference_db, commit=False):
+    arg_tuples = []
+    for connection_config in input_plugin.get_connection_configs():
+        arg_tuples.append((reference_db, connection_config, commit))
+    return arg_tuples
+
+
+parser = OptionParser()
+
+parser.add_option('-c', "--config", dest="config_path",
+                  help="Config file", metavar="CONFIG")
+parser.add_option('--max-threads',
+                  dest='max_threads',
+                  default=60,
+                  help="Maximum number of databases to process in parallel",
+                  metavar="MAX_THREADS")
+parser.add_option("--commit",
+                  dest="commit",
+                  action="store_true",
+                  default=False,
+                  help="Whether or not to commit changes")
+parser.add_option('--pickle-path',
+                  dest='pickle_path',
+                  help="Path to pickled database",
+                  metavar="PICKLE_PATH")
+
+(options, args) = parser.parse_args()
+
+if not options.config_path:
+    parser.print_help()
+    fail("config path is required!")
+elif not options.pickle_path:
+    parser.print_help()
+    fail("--pickle-path is required!")
+
+config = Config(options.config_path)
+
+reference_db = PickleProvider(options.pickle_path)
+database_configs = get_transform_arg_tuples(config.input_plugin, reference_db, options.commit)
+pool = ThreadPool(processes=options.max_threads)
+pool.map_async(transform, database_configs).get(99999)

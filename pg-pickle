@@ -1,0 +1,66 @@
+#!/usr/bin/env python2
+import os
+from optparse import OptionParser
+
+from lib.provider import DBConnectionProvider
+from lib.util import print_info, pickle_database, fail, format_ignore
+
+parser = OptionParser()
+parser.add_option("--ignore-columns",
+                  dest="ignore_columns",
+                  help="Columns to be ignored, specified as a comma seperated list. Wildcards can be used, eg, *ignore*",
+                  action='callback',
+                  type='string',
+                  default=[],
+                  callback=format_ignore)
+parser.add_option("--ignore-tables",
+                  dest="ignore_tables",
+                  help="Tables to be ignored, specified as a comma seperated list. Wildcards can be used, eg, *ignore*",
+                  action='callback',
+                  type='string',
+                  default=[],
+                  callback=format_ignore)
+parser.add_option('-o', "--out",
+                  dest="out_path",
+                  help="Path to output file",
+                  default=os.getcwd(),
+                  metavar="OUT_PATH")
+parser.add_option('--dbname',
+                  dest='dbname',
+                  help="Database name",
+                  metavar="DBNAME")
+parser.add_option('--dbuser',
+                  dest='dbuser',
+                  help="Database user",
+                  metavar="DBUSER")
+parser.add_option('--dbpass',
+                  dest='dbpass',
+                  help="Database password",
+                  metavar="DBPASS")
+parser.add_option('--dbhost',
+                  dest='dbhost',
+                  help="Database host",
+                  metavar="DBHOST")
+parser.add_option('--dbport',
+                  dest='dbport',
+                  help="Database port",
+                  default=5432,
+                  metavar="DBPORT")
+
+(options, args) = parser.parse_args()
+
+for setting_name in ('dbname', 'dbuser', 'dbpass', 'dbhost', 'dbport'):
+    if getattr(options, setting_name) is None:
+        parser.print_help()
+        fail("--%s is required in pickle mode!" % setting_name)
+
+out_file = os.path.join(options.out_path, options.dbname + '.pickle')
+print_info("Pickling: ", "%s to %s" % (options.dbname, out_file))
+referencedb = DBConnectionProvider(host=options.dbhost,
+                                   database=options.dbname,
+                                   user=options.dbuser,
+                                   password=options.dbpass,
+                                   port=options.dbport,
+                                   ignore_columns=options.ignore_columns,
+                                   ignore_tables=options.ignore_tables)
+pickle_database(referencedb.database, out_file)

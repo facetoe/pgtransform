@@ -1,0 +1,107 @@
+#!/usr/bin/env python2
+import os
+import threading
+import traceback
+from multiprocessing.pool import ThreadPool
+from optparse import OptionParser
+
+from lib.config import Config
+from lib.pg_compare import PGCompare
+from lib.provider import PickleProvider, DBConnectionProvider
+from lib.util import print_info, synchronized, fail, format_ignore
+from lib.writer import SQLightWriter, STDOUTWriter
+
+
+def get_compare_arg_tuples(input_plugin, reference_db, ignore_items):
+    arg_tuples = []
+    for connection_config in input_plugin.get_connection_configs():
+        arg_tuples.append((reference_db, connection_config, ignore_items))
+    return arg_tuples
+
+
+def compare(arg_tuple):
+    try:
+        reference_db, database, ignore_items = arg_tuple
+        kwargs = database.__dict__
+        kwargs.update(ignore_items)
+        db = DBConnectionProvider(**kwargs)
+        comparator = PGCompare(reference_provider=reference_db, test_provider=db)
+        print_info("Comparing: ", "{} -> {}".format(reference_db.database.name, database.database))
+        database_diffs = comparator.compare()
+        print_info("Writing results for: ", database.database)
+        write_output(database, database_diffs)
+    except Exception, e:
+        print "Failed: %s" % e.message
+
+
+def get_writer(output_path, db_name):
+    if options.output_type == 'stdout':
+        return STDOUTWriter()
+    elif options.output_type == 'sqlite':
+        return SQLightWriter(output_path, db_name)
+    else:
+        fail("output-type is required")
+
+
+lock = threading.RLock()
+
+
+@synchronized(lock=lock)
+def write_output(database, database_diffs):
+    writer = get_writer(os.path.join(options.out_path, 'db_diffs.sqlite'), database.database)
+    writer.write(database_diffs)
+
+
+VALID_OUTPUT_TYPES = ('stdout', 'sqlite')
+
+parser = OptionParser()
+parser.add_option('-c', "--config", dest="config_path",
+                  help="Config file", metavar="CONFIG")
+parser.add_option("--ignore-columns",
+                  dest="ignore_columns",
+                  help="Columns to be ignored, specified as a comma seperated list. Wildcards can be used, eg, *ignore*",
+                  action='callback',
+                  type='string',
+                  default=[],
+                  callback=format_ignore)
+parser.add_option("--ignore-tables",
+                  dest="ignore_tables",
+                  help="Tables to be ignored, specified as a comma seperated list. Wildcards can be used, eg, *ignore*",
+                  action='callback',
+                  type='string',
+                  default=[],
+                  callback=format_ignore)
+parser.add_option('--pickle-path',
+                  dest='pickle_path',
+                  help="Path to pickled database",
+                  metavar="PICKLE_PATH")
+parser.add_option('--max-threads',
+                  dest='max_threads',
+                  default=60,
+                  type='int',
+                  help="Maximum number of databases to process in parallel",
+                  metavar="MAX_THREADS")
+parser.add_option('-o', "--out",
+                  dest="out_path",
+                  help="Path to output file",
+                  default=os.getcwd(),
+                  metavar="OUT_PATH")
+parser.add_option("--output-type",
+                  help="Allowed values: %s" % str(VALID_OUTPUT_TYPES),
+                  default='stdout')
+(options, args) = parser.parse_args()
+
+if not options.config_path:
+    parser.print_help()
+    fail("config path is required!")
+elif not options.pickle_path:
+    parser.print_help()
+    fail("--pickle-path is required!")
+
+config = Config(options.config_path)
+ref_db = PickleProvider(options.pickle_path)
+database_configs = get_compare_arg_tuples(config.input_plugin, ref_db,
+                                          {'ignore_tables': options.ignore_tables,
+                                           'ignore_columns': options.ignore_columns})
+pool = ThreadPool(processes=options.max_threads)
+pool.map_async(compare, database_configs).get(99999)
