@@ -29,8 +29,6 @@ class PGTransform(object):
                 print_info('Applying strategy: ', strategy_class.__name__)
                 for diff_node in self.get_target_nodes(strategy):
                     self.apply_strategy(diff_node, strategy)
-                print
-
         if commit:
             self.db_connection.commit()
             print_info("Changes committed!")
