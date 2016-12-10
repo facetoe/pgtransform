@@ -14,12 +14,18 @@ class OutputWriter(object):
 
 
 class STDOUTWriter(OutputWriter):
+    """
+    Prints the difference tree to STDOUT
+    """
     def write(self, database_diffs):
         if len(database_diffs) > 0:
             print database_diffs.to_tree()
 
 
 class SQLightWriter(OutputWriter):
+    """
+    Writes the difference tree to a SQLite database.
+    """
     SQL_CREATE_TABLE_DATABASE = """
     CREATE TABLE if not exists database(
            id         INTEGER PRIMARY KEY NOT NULL,

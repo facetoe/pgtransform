@@ -9,6 +9,9 @@ class DBProvider(object):
 
 
 class PickleProvider(DBProvider):
+    """
+    Deserialize a pickled database
+    """
     def __init__(self, pickle_path):
         self.database = unpickle_database(pickle_path)
 
@@ -17,6 +20,9 @@ class PickleProvider(DBProvider):
 
 
 class DBConnectionProvider(DBProvider):
+    """
+    Build a Database object from a live connection.
+    """
     def __init__(self, host, database, user, password, port=5432, ignore_columns=None,
                  ignore_tables=None):
         self.db_connection = DBConnection(host=host,

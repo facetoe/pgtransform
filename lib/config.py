@@ -7,6 +7,9 @@ from lib.exception import ConfigException
 
 
 class Config(object):
+    """
+    Simple config object that knows how to locate and load input plugins and strategies.
+    """
     _strategy_vars = ['applicable_tables', 'applicable_columns']
 
     _INPUT_PLUGIN = 'InputPlugin'
@@ -55,9 +58,8 @@ class Config(object):
 
     def get_strategy(self, section):
         strategy = dict()
-        if not self.config.has_option(section, 'enabled') or self.config.get(section,
-                                                                             'enabled').lower().strip() not in (
-        'yes', 'true'):
+        if not self.config.has_option(section, 'enabled') \
+                or self.config.get(section, 'enabled').lower().strip() not in ('yes', 'true'):
             return None
 
         for var_name in self._strategy_vars:

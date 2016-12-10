@@ -1,6 +1,6 @@
 class StrategyException(Exception):
-    pass
+    """ Raised when strategy encounters an impossible situation """
 
 
 class ConfigException(Exception):
-    pass
+    """ Raised when there is a config related error """
