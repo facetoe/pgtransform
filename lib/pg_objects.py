@@ -104,7 +104,6 @@ class DatabaseObject(object):
                     attr_diffs.append(
                         DiffNode(name=attr_name,
                                  object_type=ColumnAttribute,
-                                 expected_obj=self,
                                  data=DiffItem(name=attr_name,
                                                expected=attr,
                                                found=other_attr)))
@@ -112,7 +111,6 @@ class DatabaseObject(object):
                 attr_diffs.append(
                     DiffNode(name=attr_name,
                              object_type=ColumnAttribute,
-                             expected_obj=self,
                              data=DiffItem(name=attr_name,
                                            expected=attr,
                                            found=None)))
@@ -125,7 +123,6 @@ class DatabaseObject(object):
                 attr_diffs.append(
                     DiffNode(name=other_attr_name,
                              object_type=ColumnAttribute,
-                             expected_obj=self,
                              data=DiffItem(name=other_attr_name,
                                            expected=None,
                                            found=other_attr)))

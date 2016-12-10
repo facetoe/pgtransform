@@ -18,6 +18,7 @@ class PGTransform(object):
     def transform(self, commit=False):
         """
         For each strategy, loop over it's applicable nodes and call the strategy.execute() method on it.
+
         :param commit: whether or not to commit
         """
 
@@ -39,6 +40,7 @@ class PGTransform(object):
     def apply_strategy(self, node, strategy):
         """
         Apply a strategy.
+
         :param node: the diff node to pass to execute()
         :param strategy: the strategy to call execute() on
         :return:
@@ -51,6 +53,7 @@ class PGTransform(object):
         """
         Return a list of nodes that this strategy applies to. If applicable_tables or applicable_columns has been
         specified in the config, only nodes from those columns and or tables will be returned.
+
         :param strategy: stratgey to retrieve nodes for
         :return:
         """
@@ -65,6 +68,7 @@ class PGTransform(object):
         """
         Return all matching nodes for this strategy. A node is considered to match if it's target attribute
         is equal to the target parameter that is passed in (essentially getattr(somenode, attribute) == target)).
+
         :param strategy: the target to gather nodes for
         :param target: target to compare with. Can be a subclass of DatabaseObject or a ColumnAttribute name
         :param attribute: the name of the DiffNode attribute to compare with target.
